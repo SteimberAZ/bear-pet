@@ -75,16 +75,19 @@ class Pet(QWidget):
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnBottomHint | Qt.WindowType.Tool | Qt.WindowType.WindowTransparentForInput | Qt.WindowType.WindowDoesNotAcceptFocus)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
-        self.setGeometry(geo)
+        # The window only wraps the bear and its bubble and moves with it, so it never covers the desktop.
+        self.geo = geo
         self.W, self.H, self.px = geo.width(), geo.height(), 6
         self.bw, self.bh = 15 * self.px, 13 * self.px
+        self.mx, self.my = 160, 50
+        self.resize(self.bw + 2 * self.mx, self.bh + self.my + 10)
         self.cache = {f: build(f) for f in FACES}
         self.x, self.y, self.dy = self.W - 300.0, self.H - 260.0, self.H - 260.0
         self.state, self.face, self.msg, self.until = "idle", "happy", es("~1Hola Randy~3"), time.time() + 4
         self.tx, self.ty = self.x, self.y
         self.font = QFont("Fira Code", 11)
         self.font.setBold(True)
-        self.last = QRect()
+        self.place()
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.tick)
         self.timer.start(33)
@@ -98,8 +101,8 @@ class Pet(QWidget):
         except FileNotFoundError:
             pass
 
-    def bounds(self):
-        return QRect(int(self.x) - 160, int(self.dy) - 50, self.bw + 320, self.bh + 60)
+    def place(self):
+        self.move(self.geo.x() + int(self.x) - self.mx, self.geo.y() + int(self.dy) - self.my)
 
     def tick(self):
         now = time.time()
@@ -129,13 +132,12 @@ class Pet(QWidget):
             self.ty = random.randint(80, self.H - self.bh - 150)
         hop = abs(math.sin(now * 9)) * 6 if self.state == "walk" else 0
         self.dy = self.y - hop
-        r = self.bounds()
-        self.update(r.united(self.last))
-        self.last = r
+        self.place()
+        self.update()
 
     def paintEvent(self, event):
         p = QPainter(self)
-        x, y, s = int(self.x), int(self.dy), self.px
+        x, y, s = self.mx, self.my, self.px
         for r, c, col in self.cache[self.face]:
             p.fillRect(x + c * s, y + r * s, s, s, col)
         if self.msg:
